@@ -664,11 +664,11 @@ namespace SoundFingerprinting.Tests.Unit.Query
         private static AudioSamples Concatenate(IReadOnlyList<AudioSamples> data)
         {
             int length = data.Sum(samples => samples.Samples.Length);
-            float[] concatenated = new float[length];
+            var concatenated = new Memory<float>(new float[length]);
             int dest = 0;
             foreach (var audioSamples in data)
             {
-                Array.Copy(audioSamples.Samples, 0, concatenated, dest, audioSamples.Samples.Length);
+                audioSamples.Samples.CopyTo(concatenated.Slice(dest, audioSamples.Samples.Length));
                 dest += audioSamples.Samples.Length;
             }
 

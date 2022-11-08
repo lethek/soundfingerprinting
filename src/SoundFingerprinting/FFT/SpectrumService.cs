@@ -31,14 +31,14 @@
             float[] frames = new float[width * configuration.LogBins];
             ushort[] logFrequenciesIndexes = logUtility.GenerateLogFrequenciesRanges(audioSamples.SampleRate, configuration);
             float[] window = configuration.Window.GetWindow(wdftSize);
-            float[] samples = audioSamples.Samples;
+            var samples = audioSamples.Samples;
 
             unsafe
             {
                 Parallel.For(0, width, index =>
                 {
                     float* fftArray = stackalloc float[wdftSize];
-                    CopyAndWindow(fftArray, samples, index * configuration.Overlap, window);
+                    CopyAndWindow(fftArray, samples.Span, index * configuration.Overlap, window);
                     fftServiceUnsafe.FFTForwardInPlace(fftArray, wdftSize);
                     ExtractLogBins(fftArray, logFrequenciesIndexes, configuration.LogBins, wdftSize, frames, index);
                 });
@@ -97,7 +97,7 @@
             return (int)((float)audioSamples / overlap);
         }
 
-        private static unsafe void CopyAndWindow(float* fftArray, float[] samples, int prefix, float[] window)
+        private static unsafe void CopyAndWindow(float* fftArray, ReadOnlySpan<float> samples, int prefix, float[] window)
         {
             for (int j = 0; j < window.Length; ++j)
             {

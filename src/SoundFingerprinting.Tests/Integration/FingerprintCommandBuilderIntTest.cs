@@ -345,12 +345,12 @@
             logImageNormalization.Verify(_ => _.Normalize(It.IsAny<IEnumerable<Frame>>()));
         }
 
-        private static float[] GetQuerySamples(AudioSamples audioSamples, int startAtSecond, int secondsToProcess)
+        private static ReadOnlyMemory<float> GetQuerySamples(AudioSamples audioSamples, int startAtSecond, int secondsToProcess)
         {
             int sampleRate = audioSamples.SampleRate;
-            float[] querySamples = new float[sampleRate * secondsToProcess];
+            var querySamples = new Memory<float>(new float[sampleRate * secondsToProcess]);
             int startAt = startAtSecond * sampleRate;
-            Array.Copy(audioSamples.Samples, startAt, querySamples, 0, querySamples.Length);
+            audioSamples.Samples.Slice(startAt, querySamples.Length).CopyTo(querySamples);
             return querySamples;
         }
 

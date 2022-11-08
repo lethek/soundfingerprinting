@@ -15,12 +15,12 @@
         public float[][] CreateSpectrogram(AudioSamples audioSamples, int overlap, int wdftSize)
         {
             float[] window = new DefaultSpectrogramConfig().Window.GetWindow(wdftSize);
-            float[] samples = audioSamples.Samples;
+            var samples = audioSamples.Samples;
             int width = (samples.Length - wdftSize) / overlap;
             float[][] frames = new float[width][];
             for (int i = 0; i < width; i++)
             {
-                float[] complexSignal = fftService.FFTForward(samples, i * overlap, wdftSize, window);
+                var complexSignal = fftService.FFTForward(samples.Span, i * overlap, wdftSize, window);
                 float[] band = new float[(wdftSize / 2) + 1];
                 for (int j = 0; j < wdftSize / 2; j++)
                 {

@@ -1,6 +1,6 @@
 namespace SoundFingerprinting.Tests.Unit.Content
 {
-    using System.Linq;
+    using NetFabric.Hyperlinq;
     using NUnit.Framework;
     using SoundFingerprinting.Content;
 
@@ -29,7 +29,7 @@ namespace SoundFingerprinting.Tests.Unit.Content
             Assert.AreEqual(15, subTracked.Duration);
             int half = audioSamples.Samples.Length / 2;
             Assert.AreEqual(half, subTracked.Samples.Samples.Length);
-            CollectionAssert.AreEqual(audioSamples.Samples.Take(half), subTracked.Samples.Samples);
+            CollectionAssert.AreEqual(audioSamples.Samples.AsValueEnumerable().Take(half), subTracked.Samples.Samples.AsValueEnumerable());
         }
     }
 }

@@ -2,6 +2,7 @@ namespace SoundFingerprinting.Tests.Unit.Audio
 {
     using System;
     using Microsoft.Extensions.Logging;
+    using NetFabric.Hyperlinq;
     using NLog.Extensions.Logging;
     using NUnit.Framework;
     using SoundFingerprinting.Audio;
@@ -126,17 +127,17 @@ namespace SoundFingerprinting.Tests.Unit.Audio
                 Assert.IsNotNull(aggregated);
                 if (i == 0)
                 {
-                    CollectionAssert.AreEqual(next, aggregated.Samples);
+                    CollectionAssert.AreEqual(next, aggregated.Samples.AsValueEnumerable());
                     prev = next;
                     continue;
                 }
                 
-                VerifyEndingsAreAttached(prev, next, aggregated.Samples, minSize, stride.NextStride);
+                VerifyEndingsAreAttached(prev, next, aggregated.Samples.Span, minSize, stride.NextStride);
                 prev = next;
             }
         }
 
-        private static void VerifyEndingsAreAttached(float[] prev, float[] next, float[] aggregated, int minSize, int strideSize)
+        private static void VerifyEndingsAreAttached(float[] prev, float[] next, ReadOnlySpan<float> aggregated, int minSize, int strideSize)
         {
             int prefixLength = minSize - strideSize;
             Assert.AreEqual(minSize + prefixLength, aggregated.Length);

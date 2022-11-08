@@ -10,7 +10,7 @@ namespace SoundFingerprinting.Audio
     public class RealtimeAudioSamplesAggregator : IRealtimeAudioSamplesAggregator
     {
         private readonly int minSamplesPerFingerprint;
-        private float[] tail;
+        private Memory<float> tail;
 
         /// <summary>
         ///  Initializes a new instance of the <see cref="RealtimeAudioSamplesAggregator"/> class.
@@ -21,7 +21,7 @@ namespace SoundFingerprinting.Audio
         {
             this.minSamplesPerFingerprint = minSamplesPerFingerprint;
             Stride = stride;
-            tail = Array.Empty<float>();
+            tail = Memory<float>.Empty;
         }
 
         private IStride Stride { get; }
@@ -36,9 +36,10 @@ namespace SoundFingerprinting.Audio
 
         private AudioSamples AttachNewChunk(AudioSamples chunk)
         {
-            float[] prefixed = new float[tail.Length + chunk.Samples.Length];
-            Buffer.BlockCopy(tail, 0, prefixed, 0, sizeof(float) * tail.Length);
-            Buffer.BlockCopy(chunk.Samples, 0, prefixed, sizeof(float) *  tail.Length, sizeof(float) * chunk.Samples.Length);
+            var prefixed = new Memory<float>(new float[tail.Length + chunk.Samples.Length]);
+            tail.CopyTo(prefixed.Slice(0, tail.Length));
+            chunk.Samples.CopyTo(prefixed.Slice(tail.Length, chunk.Samples.Length));
+
             var samples = new AudioSamples(prefixed, chunk.Origin, chunk.SampleRate, chunk.RelativeTo.AddSeconds(-(float)tail.Length / chunk.SampleRate), -(double)tail.Length / chunk.SampleRate);
             tail = prefixed;
             return samples;
@@ -61,12 +62,12 @@ namespace SoundFingerprinting.Audio
                     
                     // tail size is always shorter than minSamplesPerFingerprint
                     int tailSize = minSamplesPerFingerprint - nextStride + estimatedIgnoredWindow;
-                    tail = new float[tailSize];
-                    Buffer.BlockCopy(samples.Samples, sizeof(float) * (samples.Samples.Length - tailSize), tail, 0, sizeof(float) * tailSize);
+                    tail = new Memory<float>(new float[tailSize]);
+                    samples.Samples.Slice(samples.Samples.Length - tailSize, tailSize).CopyTo(tail);
                 }
                 else
                 {
-                    tail = Array.Empty<float>();
+                    tail = Memory<float>.Empty;
                 }
             }
         }

@@ -1,9 +1,11 @@
 ﻿namespace SoundFingerprinting.Tests.Integration
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Runtime.Serialization.Formatters.Binary;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
 
     using Audio;
     using Data;
@@ -12,7 +14,7 @@
 
     public abstract class IntegrationWithSampleFilesTest : AbstractTest
     {
-        private readonly string pathToSamples = Path.Combine(TestContext.CurrentContext.TestDirectory, "chopinsamples.bin");
+        private readonly string pathToSamples = Path.Combine(TestContext.CurrentContext.TestDirectory, "chopinsamples.json");
         
         protected readonly string PathToWav = Path.Combine(TestContext.CurrentContext.TestDirectory, "chopin_short.wav");
 
@@ -54,17 +56,28 @@
 
         protected AudioSamples GetAudioSamples()
         {
-            lock (this)
-            {
-                var serializer = new BinaryFormatter();
-                using Stream stream = new FileStream(pathToSamples, FileMode.Open, FileAccess.Read);
-                return (AudioSamples)serializer.Deserialize(stream);
+            lock (this) {
+                using var stream = new FileStream(pathToSamples, FileMode.Open, FileAccess.Read);
+                return JsonSerializer.Deserialize<AudioSamples>(stream, SerializerOptions);
             }
         }
 
         private static List<HashedFingerprint> SortHashesBySequenceNumber(IEnumerable<HashedFingerprint> hashDatasFromFile)
         {
             return hashDatasFromFile.OrderBy(hashData => hashData.SequenceNumber).ToList();
+        }
+
+        private static readonly JsonSerializerOptions SerializerOptions = new() {
+            Converters = { new FloatMemoryJsonConverter() }
+        };
+
+        private class FloatMemoryJsonConverter : JsonConverter<ReadOnlyMemory<float>>
+        {
+            public override ReadOnlyMemory<float> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+                => new(JsonSerializer.Deserialize<float[]>(ref reader, options));
+
+            public override void Write(Utf8JsonWriter writer, ReadOnlyMemory<float> value, JsonSerializerOptions options)
+                => JsonSerializer.Serialize(writer, value.ToArray(), options);
         }
     }
 }

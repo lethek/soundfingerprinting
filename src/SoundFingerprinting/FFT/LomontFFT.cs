@@ -20,7 +20,7 @@
             Initialize(config.WdftSize);
         }
 
-        public float[] FFTForward(float[] data, int startIndex, int length, float[] window)
+        public ReadOnlySpan<float> FFTForward(ReadOnlySpan<float> data, int startIndex, int length, float[] window)
         {
             float* toTransform = stackalloc float[length];
             for (int i = startIndex, j = 0; i < startIndex + length; ++i, ++j)

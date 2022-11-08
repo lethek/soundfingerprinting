@@ -56,11 +56,11 @@
         public void ShouldRunCorrectlyForSpecificUseCase()
         {
             int sequenceNumber = 334;
-            float[] samples = GetAudioSamples().Samples;
+            var samples = GetAudioSamples().Samples;
             int start = sequenceNumber * 1536;
 
-            float[] troubledPart = new float[8192 + 2048];
-            Array.Copy(samples, start, troubledPart, 0, 8192 + 2048);
+            var troubledPart = new Memory<float>(new float[8192 + 2048]);
+            samples.Slice(start, 8192 + 2048).CopyTo(troubledPart);
             var audioSamples = new AudioSamples(troubledPart, "test", 5512);
 
             var fingerprintService = new FingerprintService(

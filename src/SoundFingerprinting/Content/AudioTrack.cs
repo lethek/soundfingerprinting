@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using NetFabric.Hyperlinq;
     using SoundFingerprinting.Audio;
     using static System.Math;
 
@@ -41,9 +42,7 @@
             start = Max(start, 0);
             length = Min(length, Duration - start);
             var samples = Samples.Samples
-                .Skip((int)(start * Samples.SampleRate))
-                .Take((int)(length * Samples.SampleRate))
-                .ToArray();
+                .Slice((int)(start * Samples.SampleRate), (int)(length * Samples.SampleRate));
             return new AudioTrack(new AudioSamples(samples, Samples.Origin, Samples.SampleRate, Samples.RelativeTo.AddSeconds(start)));
         }
 
@@ -83,7 +82,7 @@
             var audioTrack = tracks.First();
             var first = audioTrack.Samples;
             var samples = tracks
-                .SelectMany(t => t.Samples.Samples)
+                .SelectMany(t => t.Samples.Samples.AsValueEnumerable())
                 .ToArray();
             var audioSamples = new AudioSamples(samples, first.Origin, first.SampleRate, first.RelativeTo);
             return new AudioTrack(audioSamples);

@@ -1,5 +1,7 @@
 ﻿namespace SoundFingerprinting.FFT
 {
+    using System;
+
     internal interface IFFTService
     {
         /// <summary>
@@ -10,7 +12,7 @@
         /// <param name="length">Length of the FFT window</param>
         /// <param name="window">Windowing function to run on input</param>
         /// <returns>Real FFT</returns>
-        float[] FFTForward(float[] data, int startIndex, int length, float[] window);
+        ReadOnlySpan<float> FFTForward(ReadOnlySpan<float> data, int startIndex, int length, float[] window);
     }
 
     internal unsafe interface IFFTServiceUnsafe
