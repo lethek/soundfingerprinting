@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using SoundFingerprinting.LCS;
+    using static SoundFingerprinting.LCS.QueryPathReconstructionStrategyType;
 
     /// <summary>
     ///   Enumerable matched with extensions.
@@ -12,8 +13,7 @@
     {
         private const double PermittedGapZero = 1e-5;
         
-        private static readonly IQueryPathReconstructionStrategy Single = new SingleQueryPathReconstructionStrategy();
-        private static readonly IQueryPathReconstructionStrategy Multiple = new MultipleQueryPathReconstructionStrategy();
+        private static readonly IQueryPathReconstructionStrategy QueryPathReconstructionStrategy = new QueryPathReconstructionStrategy();
         
         /// <summary>
         ///  Get coverages from provided best path described by matched with list.
@@ -36,19 +36,18 @@
         {
             var reconstructedPaths = queryPathReconstructionStrategyType switch
             {
-                QueryPathReconstructionStrategyType.Legacy => new LegacyQueryPathReconstructionStrategy(fingerprintLength).GetBestPaths(matchedEntries, Math.Min(queryLength, trackLength)),
-                QueryPathReconstructionStrategyType.SingleBestPath => Single.GetBestPaths(matchedEntries, -1),
-                QueryPathReconstructionStrategyType.MultipleBestPaths => Multiple.GetBestPaths(matchedEntries, permittedGap),
+                Legacy => new LegacyQueryPathReconstructionStrategy(fingerprintLength).GetBestPaths(matchedEntries, Math.Min(queryLength, trackLength), limit: -1),
+                SingleBestPath => QueryPathReconstructionStrategy.GetBestPaths(matchedEntries, maxGap: Math.Min(queryLength, trackLength), limit: int.MaxValue),
+                MultipleBestPaths => QueryPathReconstructionStrategy.GetBestPaths(matchedEntries, maxGap: permittedGap, limit: int.MaxValue),
                 _ => throw new NotSupportedException($"Provided path reconstruction strategy is not valid {queryPathReconstructionStrategyType}")
             };
             
-            var coverages = reconstructedPaths.Select(sequence => new Coverage(sequence, queryLength, trackLength, fingerprintLength, permittedGap));
-            if (queryPathReconstructionStrategyType == QueryPathReconstructionStrategyType.MultipleBestPaths)
+            var coverages = reconstructedPaths.Select(sequence => new Coverage(sequence, queryLength, trackLength, fingerprintLength, permittedGap)).ToList();
+            return queryPathReconstructionStrategyType switch
             {
-                return OverlappingRegionFilter.FilterContainedCoverages(coverages); 
-            }
-
-            return coverages.ToList();
+                SingleBestPath or MultipleBestPaths => OverlappingRegionFilter.FilterContainedCoverages(coverages),
+                _ => coverages
+            };
         }
 
         /// <summary>
@@ -86,6 +85,40 @@
                 .ToList();
 
             return FindGaps(ordered, trackLength, permittedGap, fingerprintLength);
+        }
+        
+        /// <summary>
+        ///  Splits best path by maximum gap.
+        /// </summary>
+        /// <param name="matches">Matches to split.</param>
+        /// <param name="maxGap">Maximum gap to consider.</param>
+        /// <returns>List of split best paths.</returns>
+        public static IEnumerable<IEnumerable<MatchedWith>> SplitBestPathByMaxGap(this IEnumerable<MatchedWith> matches, double maxGap)
+        {
+            var sequence = matches as MatchedWith[] ?? matches.ToArray();
+            if (!sequence.Any())
+            {
+                return Enumerable.Empty<IEnumerable<MatchedWith>>();
+            }
+    
+            int start = 0;
+            var list = new List<IEnumerable<MatchedWith>>();
+            for (int index = 1; index < sequence.Length; ++index)
+            {
+                if (Math.Abs(sequence[index].QueryMatchAt - sequence[index - 1].QueryMatchAt) > maxGap || Math.Abs(sequence[index].TrackMatchAt - sequence[index - 1].TrackMatchAt) > maxGap)
+                {
+                    list.Add(sequence.Skip(start).Take(index - start));
+                    start = index;
+                }
+            }
+
+            var last = sequence.Skip(start).ToList();
+            if (last.Any())
+            {
+                list.Add(last);
+            }
+
+            return list;
         }
 
         private static IEnumerable<Gap> FindGaps(IEnumerable<Tuple<uint, float>> ordered, double totalLength, double permittedGap, double fingerprintLength)
